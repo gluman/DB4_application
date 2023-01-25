@@ -4,8 +4,8 @@
 # телефон
 # Сложность в том, что телефон у клиента может быть не один, а два, три и даже больше. А может и вообще не быть телефона (например, он не захотел его оставлять).
 # Вам необходимо разработать структуру БД для хранения информации и несколько функций на python для управления данными:
-# Функция, создающая структуру БД (таблицы)
-# Функция, позволяющая добавить нового клиента
+# Функция, создающая структуру БД (таблицы) - done
+# Функция, позволяющая добавить нового клиента  +-
 # Функция, позволяющая добавить телефон для существующего клиента
 # Функция, позволяющая изменить данные о клиенте
 # Функция, позволяющая удалить телефон для существующего клиента
@@ -18,21 +18,20 @@
 import psycopg2
 import pprint as pp
 
+from unidecode import unidecode
+
 run = True
 while run:
     with psycopg2.connect(database="clientdatabase", user="postgres", password="postgres", host='localhost') as conn:
         with conn.cursor() as cur:
             def check_exist_client(name, surname, email):
                 '''Check exist client in database'''
-                # try:
                 cur.execute('''SELECT * FROM clients c
                 WHERE (c.name = %s AND c.surname = $s) OR email= %s;
-                ''', (name, surname, email))
+                ''', (name.encode('utf-8'), surname.encode('utf-8'), email))
                 conn.commit()
                 result = cur.fetchone()[0]
-                # except:
-                #     return 'miss_data'  # if not rows in table
-                # else:
+
                 if result != 0:
                     return False    # Check is NOT OK
                 else:
@@ -102,6 +101,7 @@ while run:
                 phone = input('Please, input clients phone number(Enter to skip): ')
 
                 check = check_exist_client(name, surname, email)
+
                 if check != False:
                     cur.execute("""
                         INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
@@ -143,8 +143,6 @@ while run:
             def find_clinet():
                 pass
 
-
-
             i = input('input command, h - help: ')
             if i == 'c':
                 create_tables()
@@ -166,109 +164,3 @@ while run:
                 find_clinet()
             elif i == 'x':
                 run = False
-                # else:
-                #     pp('unknow command. h - help')
-                #     continue
-
-
-    # conn.close()
-
-    # class Client:
-    # def __int__(self, name, surname, email, phone):
-    #     self.name = name
-    #     self.surname = surname
-    #     self.email = email
-    #     self.phone = phone
-    #
-    #
-    # def add_new(self, name, surname):
-    #
-    #
-    #     # наполнение таблиц (C из CRUD)
-    #     cur.execute("""
-    #     INSERT INTO course(name) VALUES('Python');
-    #     """)
-    #     conn.commit()  # фиксируем в БД
-    #
-    #     cur.execute("""
-    #     INSERT INTO course(name) VALUES('Java') RETURNING id;
-    #     """)
-    #     print(cur.fetchone())  # запрос данных автоматически зафиксирует изменения
-    #
-    #     cur.execute("""
-    #     INSERT INTO homework(number, description, course_id) VALUES(1, 'простое дз', 1);
-    #     """)
-    #     conn.commit()  # фиксируем в БД
-    #
-    #     # извлечение данных (R из CRUD)
-    #     cur.execute("""
-    #     SELECT * FROM course;
-    #     """)
-    #     print('fetchall', cur.fetchall())  # извлечь все строки
-    #
-    #     cur.execute("""
-    #     SELECT * FROM course;
-    #     """)
-    #     print(cur.fetchone())  # извлечь первую строку (аналог LIMIT 1)
-    #
-    #     cur.execute("""
-    #     SELECT * FROM course;
-    #     """)
-    #     print(cur.fetchmany(3))  # извлечь первые N строк (аналог LIMIT N)
-    #
-    #     cur.execute("""
-    #     SELECT name FROM course;
-    #     """)
-    #     print(cur.fetchall())
-    #
-    #     cur.execute("""
-    #     SELECT id FROM course WHERE name='Python';
-    #     """)
-    #     print(cur.fetchone())
-    #
-    #     cur.execute("""
-    #     SELECT id FROM course WHERE name='{}';
-    #     """.format("Python"))  # плохо - возможна SQL инъекция
-    #     print(cur.fetchone())
-    #
-    #     cur.execute("""
-    #     SELECT id FROM course WHERE name=%s;
-    #     """, ("Python",))  # хорошо, обратите внимание на кортеж
-    #     print(cur.fetchone())
-    #
-    #     def get_course_id(cursor, name: str) -> int:
-    #         cursor.execute("""
-    #         SELECT id FROM course WHERE name=%s;
-    #         """, (name,))
-    #         return cur.fetchone()[0]
-    #     python_id = get_course_id(cur, 'Python')
-    #     print('python_id', python_id)
-    #
-    #     cur.execute("""
-    #     INSERT INTO homework(number, description, course_id) VALUES(%s, %s, %s);
-    #     """, (2, "задание посложнее", python_id))
-    #     conn.commit()  # фиксируем в БД
-    #
-    #     cur.execute("""
-    #     SELECT * FROM homework;
-    #     """)
-    #     print(cur.fetchall())
-    #
-    #     # обновление данных (U из CRUD)
-    #     cur.execute("""
-    #     UPDATE course SET name=%s WHERE id=%s;
-    #     """, ('Python Advanced', python_id))
-    #     cur.execute("""
-    #     SELECT * FROM course;
-    #     """)
-    #     print(cur.fetchall())  # запрос данных автоматически зафиксирует изменения
-    #
-    #     # удаление данных (D из CRUD)
-    #     cur.execute("""
-    #     DELETE FROM homework WHERE id=%s;
-    #     """, (1,))
-    #     cur.execute("""
-    #     SELECT * FROM homework;
-    #     """)
-    #     print(cur.fetchall())  # запрос данных автоматически зафиксирует изменения
-
