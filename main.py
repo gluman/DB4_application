@@ -21,33 +21,34 @@ import pprint as pp
 from unidecode import unidecode
 
 run = True
-
 with psycopg2.connect(database="clientdatabase", user="postgres", password="postgres", host='localhost') as conn:
     with conn.cursor() as cur:
         while run:
-            def check_exist_client(name, surname, email):
-                '''Check exist client in database'''
-                try:
-                    cur.execute('''
-                    SELECT * FROM clients c
-                    WHERE (c.name = %s AND c.surname = $s) OR email= %s;
-                    ''', (name, surname, email))
-                    conn.commit()
-                    result = cur.fetchone()[0]
-                except:
-                    return False
-                if result != 0:
-                    return False    # Check is NOT OK
-                else:
-                    return True     # Check is OK
+            def edit_client():
+
+                # def check_exist_client(name, surname, email):
+                #     '''Check exist client in database'''
+                #     try:
+                #         cur.execute('''
+                #         SELECT * FROM clients c
+                #         WHERE (c.name = %s AND c.surname = $s) OR email= %s;
+                #         ''', (name, surname, email))
+                #         conn.commit()
+                #         result = cur.fetchone()[0]
+                #     except:
+                #         return False
+                #     if result != 0:
+                #         return False    # Check is NOT OK
+                #     else:
+                #         return True     # Check is OK
 
             def check_exist_phonenum(number):
                 '''Check exist phone in database'''
                 try:
                     cur.execute('''
-                    SELECT count(*) FROM phone_numbers pn
-                    WHERE pn.number = %s;
-                    ''', (number,))
+                SELECT count(*) FROM phone_numbers pn
+                WHERE pn.number = %s;
+                ''', (number,))
                     result = cur.fetchone()
                 except:
                     return 'miss_data'
@@ -60,42 +61,42 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
             def drop_data():
                 # удаление таблиц
                 cur.execute("""
-                DROP TABLE phone_numbers;
-                DROP TABLE clients;
-                """)
+            DROP TABLE phone_numbers;
+            DROP TABLE clients;
+            """)
                 conn.commit()
 
             def show_help():
                 print('''
-                    c - create tables
-                    h - show help
-                    a - add client
-                    ap - add clients phone number 
-                    l - list clients
-                    e - edit clients information
-                    d - delete clients
-                    drop - drop tables
-                    f - find clients
-                    x - exit
-                    ''')
+                c - create tables
+                h - show help
+                a - add client
+                ap - add clients phone number 
+                l - list clients
+                e - edit clients information
+                d - delete clients
+                drop - drop tables
+                f - find clients
+                x - exit
+                ''')
 
             def create_tables():
                 cur.execute("""
-                        CREATE TABLE IF NOT EXISTS clients(
-                            id_cl SERIAL PRIMARY KEY,
-                            name VARCHAR(30) NOT NULL,
-                            surname VARCHAR(60) NOT NULL,
-                            email VARCHAR(30) UNIQUE
-                            );
-                         """)
+                    CREATE TABLE IF NOT EXISTS clients(
+                        id_cl SERIAL PRIMARY KEY,
+                        name VARCHAR(30) NOT NULL,
+                        surname VARCHAR(60) NOT NULL,
+                        email VARCHAR(30) UNIQUE
+                        );
+                     """)
 
                 cur.execute("""
-                         CREATE TABLE IF NOT EXISTS phone_numbers(
-                             id_pn SERIAL PRIMARY KEY,
-                             number VARCHAR(40) UNIQUE,
-                             id_cl INTEGER NOT NULL REFERENCES clients(id_cl)
-                         );
-                         """)
+                     CREATE TABLE IF NOT EXISTS phone_numbers(
+                         id_pn SERIAL PRIMARY KEY,
+                         number VARCHAR(40) UNIQUE,
+                         id_cl INTEGER NOT NULL REFERENCES clients(id_cl)
+                     );
+                     """)
                 conn.commit()  # фиксируем в БД
 
             def add_client():
@@ -105,65 +106,63 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 phone = input('Please, input clients phone number(Enter to skip): ')
 
                 # check = check_exist_client(name, surname, email)
-                check = True
-                if check != False:
+                try:
                     cur.execute("""
-                        INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
-                        """, (name, surname, email))
-                    id_cl = cur.fetchone()  # запрос данных автоматически зафиксирует изменения   --- почему то не добавляет запись в бд, только возварщает id
+                    INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
+                    """, (name, surname, email))
+                    id_cl = cur.fetchone()[0]  # запрос данных автоматически зафиксирует изменения   --- почему то не добавляет запись в бд, только возварщает id
+                    pp(f'Client {name}, {surname}, {email} added id: {id_cl}')
                     conn.commit()
-                    add_phone_number(phone, id_cl)
-                else:
+
+                except:
                     pp('Error! Some wrong with data')
+                finally:
+                    add_phone_number(phone, id_cl)
             def add_phone_number(phone, id_cl):
                 if phone != '':
-                    check_phone = check_exist_phonenum(phone)
-                    if check_phone != False:
+                    # check_phone = check_exist_phonenum(phone)
+                    # if check_phone != False:
+                    try:
                         cur.execute("""
-                            INSERT INTO phone_numbers(number, id_cl) VALUES(%s, %s) RETURNING id_pn;
-                            """, (phone, id_cl))
-                        pp('''Client added:''', cur.fetchone())
+                        INSERT INTO phone_numbers(number, id_cl) VALUES(%s, %s) RETURNING id_pn;
+                        """, (phone, id_cl))
+                        id_pn = cur.fetchone()[0]
+                        pp(f'phone {phone} added id:', cur.fetchone()[0])
                         conn.commit()
                         # запрос данных автоматически зафиксирует изменения
-                    else:
+                    except:
                         pp('This phone alredy exist')
 
             def list_clients():
-                if check_exist_client() != 'miss_data':
-                    cur.execute("""
-                             SELECT * FROM clients;
-                             """)
-                    pp('fetchall', cur.fetchall())  # извлечь все строки
-                else:
-                    pp('No information in database')
+                cur.execute("""
+                         SELECT * FROM clients;
+                         """)
+                pp('fetchall', cur.fetchall())  # извлечь все строки
 
-            def edit_client():
-                pass
+        def delete_client():
+            pass
 
-            def delete_client():
-                pass
+        def find_clinet():
+            pass
 
-            def find_clinet():
-                pass
-
-            i = input('input command, h - help: ')
-            if i == 'c':
-                create_tables()
-            elif i == 'h':
-                show_help()
-            elif i == 'a':
-                add_client()
-            elif i == 'ap':
-                add_phone_number()
-            elif i == 'l':
-                list_clients()
-            elif i == 'e':
-                edit_client()
-            elif i == 'd':
-                delete_client()
-            elif i == 'drop':
-                drop_data()
-            elif i == 'f':
-                find_clinet()
-            elif i == 'x':
-                run = False
+        i = input('input command, h - help: ')
+        if i == 'c':
+            create_tables()
+        elif i == 'h':
+            show_help()
+        elif i == 'a':
+            add_client()
+        elif i == 'ap':
+            add_phone_number()
+        elif i == 'l':
+            list_clients()
+        elif i == 'e':
+            edit_client()
+        elif i == 'd':
+            delete_client()
+        elif i == 'drop':
+            drop_data()
+        elif i == 'f':
+            find_clinet()
+        elif i == 'x':
+            run = False
