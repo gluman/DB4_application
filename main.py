@@ -21,17 +21,21 @@ import pprint as pp
 from unidecode import unidecode
 
 run = True
-while run:
-    with psycopg2.connect(database="clientdatabase", user="postgres", password="postgres", host='localhost') as conn:
-        with conn.cursor() as cur:
+
+with psycopg2.connect(database="clientdatabase", user="postgres", password="postgres", host='localhost') as conn:
+    with conn.cursor() as cur:
+        while run:
             def check_exist_client(name, surname, email):
                 '''Check exist client in database'''
-                cur.execute('''SELECT * FROM clients c
-                WHERE (c.name = %s AND c.surname = $s) OR email= %s;
-                ''', (name.encode('utf-8'), surname.encode('utf-8'), email))
-                conn.commit()
-                result = cur.fetchone()[0]
-
+                try:
+                    cur.execute('''
+                    SELECT * FROM clients c
+                    WHERE (c.name = %s AND c.surname = $s) OR email= %s;
+                    ''', (name, surname, email))
+                    conn.commit()
+                    result = cur.fetchone()[0]
+                except:
+                    return False
                 if result != 0:
                     return False    # Check is NOT OK
                 else:
@@ -79,8 +83,8 @@ while run:
                 cur.execute("""
                         CREATE TABLE IF NOT EXISTS clients(
                             id_cl SERIAL PRIMARY KEY,
-                            name TEXT NOT NULL,
-                            surname TEXT NOT NULL,
+                            name VARCHAR(30) NOT NULL,
+                            surname VARCHAR(60) NOT NULL,
                             email VARCHAR(30) UNIQUE
                             );
                          """)
@@ -100,8 +104,8 @@ while run:
                 email = input('Please, input clients email: ')
                 phone = input('Please, input clients phone number(Enter to skip): ')
 
-                check = check_exist_client(name, surname, email)
-
+                # check = check_exist_client(name, surname, email)
+                check = True
                 if check != False:
                     cur.execute("""
                         INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
@@ -111,7 +115,6 @@ while run:
                     add_phone_number(phone, id_cl)
                 else:
                     pp('Error! Some wrong with data')
-
             def add_phone_number(phone, id_cl):
                 if phone != '':
                     check_phone = check_exist_phonenum(phone)
