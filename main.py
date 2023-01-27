@@ -24,48 +24,55 @@ run = True
 with psycopg2.connect(database="clientdatabase", user="postgres", password="postgres", host='localhost') as conn:
     with conn.cursor() as cur:
         while run:
-            def edit_client():
 
-                 def check_exist_client(name, surname, email):
-                    '''Check exist client in database'''
+
+            def check_exist_client(name, surname, email):
+
+                '''Check exist client in database'''
+                try:
+                    cur.execute('''SELECT count(*) FROM clients c
+                    WHERE c.email= %s
+                    ''', (email,))
                     try:
-                        cur.execute('''
-                        SELECT count(*) FROM clients c
-                        WHERE (c.name = %s AND c.surname = $s) OR email= %s 
-                        RETURNING count(*);
-                        ''', (name, surname, email))
-                        conn.commit()
-                        result = cur.fetchone()[0]
+                        result = int(cur.fetchone()[0])
                     except:
-                        return False
-                    if result != 0:
+                        result = None
+                    conn.commit()
+                    if int(result) :
                         return False    # Check is NOT OK
                     else:
                         return True     # Check is OK
+                except:
+                    return True
+
 
             def check_exist_phonenum(number):
                 '''Check exist phone in database'''
                 try:
                     cur.execute('''
-                SELECT count(*) FROM phone_numbers pn
-                WHERE pn.number = %s
-                RETURNING count(*);
-                ''', (number,))
-                    result = cur.fetchone()
-                except:
-                    return 'miss_data'
-                else:
-                    if result != 0:
-                        return False    # Check is NOT OK
+                    SELECT count(*) FROM phone_numbers pn
+                    WHERE pn.number = %s;
+                    ''', (number,))
+                    try:
+                        result = int(cur.fetchone()[0])
+                    except:
+                        result = None
+                    if  int(result):
+                        return False  # Check is NOT OK
                     else:
-                        return True     # Check is OK
+                        return True  # Check is OK
+                except:
+                    return True
+
+            def edit_client():
+                 pass
 
             def drop_data():
                 # удаление таблиц
                 cur.execute("""
-            DROP TABLE phone_numbers;
-            DROP TABLE clients;
-            """)
+                DROP TABLE phone_numbers;
+                DROP TABLE clients;
+                """)
                 conn.commit()
 
             def show_help():
@@ -107,32 +114,49 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 email = input('Please, input clients email: ')
                 phone = input('Please, input clients phone number(Enter to skip): ')
 
-                # check = check_exist_client(name, surname, email)
-                try:
-                    cur.execute("""
-                    INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
-                    """, (name, surname, email))
-                    id_cl = cur.fetchone()[0]  # запрос данных автоматически зафиксирует изменения   --- почему то не добавляет запись в бд, только возварщает id
-                    print(f'Client {name}, {surname}, {email} added id: {id_cl}')
-                    conn.commit()
-
-                except:
-                    print('Error! Some wrong with data')
-                finally:
-                    add_phone_number(phone, id_cl)
-            def add_phone_number(phone, id_cl):
-                if phone != '':
-                    # check_phone = check_exist_phonenum(phone)
-                    # if check_phone != False:
+                check = check_exist_client(name, surname, email)
+                if check:
                     try:
                         cur.execute("""
-                        INSERT INTO phone_numbers(number, id_cl) VALUES(%s, %s) RETURNING id_pn;
-                        """, (phone, id_cl))
-                        id_pn = cur.fetchone()[0]
+                        INSERT INTO clients(name, surname, email) 
+                        VALUES(%s, %s, %s) 
+                        ON CONFLICT
+                        DO NOTHING
+                        RETURNING id_cl;
+                        """, (name, surname, email))
+
                         conn.commit()
-                        print(f'phone {phone} added id:', id_pn)  # запрос данных автоматически зафиксирует изменения
+                        result = cur.fetchone()[0]
+                        if int(result):
+                            print(f'Client {name}, {surname}, {email} added id: {result}')
+                            add_phone_number(phone, result)
+                            return
+                        else:
+                            return
                     except:
-                        print('This phone alredy exist')
+                        print('Error! Some wrong with data')
+                        return
+
+            def add_phone_number(phone, id_cl):
+                if phone != '':
+                    check_phone = check_exist_phonenum(phone)
+                    if check_phone == True:
+                        try:
+                            cur.execute("""
+                            INSERT INTO phone_numbers(number, id_cl) 
+                            VALUES(%s, %s)  
+                            ON CONFLICT
+                            DO NOTHING
+                            RETURNING id_pn;
+                            """, (phone, id_cl))
+                            conn.commit()
+                            id_pn = cur.fetchone()[0]
+                            if int(id_pn):
+                                print(f'phone {phone} added id:', id_pn)
+                            else:
+                                return
+                        except:
+                            print('This phone alredy exist')
 
             def list_clients():
                 cur.execute("""
