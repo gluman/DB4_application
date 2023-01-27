@@ -16,7 +16,7 @@
 # Результатом работы будет .py файл.
 
 import psycopg2
-import pprint as pp
+# import pprint as pp
 
 from unidecode import unidecode
 
@@ -26,28 +26,30 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
         while run:
             def edit_client():
 
-                # def check_exist_client(name, surname, email):
-                #     '''Check exist client in database'''
-                #     try:
-                #         cur.execute('''
-                #         SELECT * FROM clients c
-                #         WHERE (c.name = %s AND c.surname = $s) OR email= %s;
-                #         ''', (name, surname, email))
-                #         conn.commit()
-                #         result = cur.fetchone()[0]
-                #     except:
-                #         return False
-                #     if result != 0:
-                #         return False    # Check is NOT OK
-                #     else:
-                #         return True     # Check is OK
+                 def check_exist_client(name, surname, email):
+                    '''Check exist client in database'''
+                    try:
+                        cur.execute('''
+                        SELECT count(*) FROM clients c
+                        WHERE (c.name = %s AND c.surname = $s) OR email= %s 
+                        RETURNING count(*);
+                        ''', (name, surname, email))
+                        conn.commit()
+                        result = cur.fetchone()[0]
+                    except:
+                        return False
+                    if result != 0:
+                        return False    # Check is NOT OK
+                    else:
+                        return True     # Check is OK
 
             def check_exist_phonenum(number):
                 '''Check exist phone in database'''
                 try:
                     cur.execute('''
                 SELECT count(*) FROM phone_numbers pn
-                WHERE pn.number = %s;
+                WHERE pn.number = %s
+                RETURNING count(*);
                 ''', (number,))
                     result = cur.fetchone()
                 except:
@@ -111,11 +113,11 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                     INSERT INTO clients(name, surname, email) VALUES(%s, %s, %s) RETURNING id_cl;
                     """, (name, surname, email))
                     id_cl = cur.fetchone()[0]  # запрос данных автоматически зафиксирует изменения   --- почему то не добавляет запись в бд, только возварщает id
-                    pp(f'Client {name}, {surname}, {email} added id: {id_cl}')
+                    print(f'Client {name}, {surname}, {email} added id: {id_cl}')
                     conn.commit()
 
                 except:
-                    pp('Error! Some wrong with data')
+                    print('Error! Some wrong with data')
                 finally:
                     add_phone_number(phone, id_cl)
             def add_phone_number(phone, id_cl):
@@ -127,42 +129,41 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                         INSERT INTO phone_numbers(number, id_cl) VALUES(%s, %s) RETURNING id_pn;
                         """, (phone, id_cl))
                         id_pn = cur.fetchone()[0]
-                        pp(f'phone {phone} added id:', cur.fetchone()[0])
                         conn.commit()
-                        # запрос данных автоматически зафиксирует изменения
+                        print(f'phone {phone} added id:', id_pn)  # запрос данных автоматически зафиксирует изменения
                     except:
-                        pp('This phone alredy exist')
+                        print('This phone alredy exist')
 
             def list_clients():
                 cur.execute("""
                          SELECT * FROM clients;
                          """)
-                pp('fetchall', cur.fetchall())  # извлечь все строки
+                print('fetchall', cur.fetchall())  # извлечь все строки
 
-        def delete_client():
-            pass
+            def delete_client():
+                pass
 
-        def find_clinet():
-            pass
+            def find_clinet():
+                pass
 
-        i = input('input command, h - help: ')
-        if i == 'c':
-            create_tables()
-        elif i == 'h':
-            show_help()
-        elif i == 'a':
-            add_client()
-        elif i == 'ap':
-            add_phone_number()
-        elif i == 'l':
-            list_clients()
-        elif i == 'e':
-            edit_client()
-        elif i == 'd':
-            delete_client()
-        elif i == 'drop':
-            drop_data()
-        elif i == 'f':
-            find_clinet()
-        elif i == 'x':
-            run = False
+            i = input('input command, h - help: ')
+            if i == 'c':
+                create_tables()
+            elif i == 'h':
+                show_help()
+            elif i == 'a':
+                add_client()
+            elif i == 'ap':
+                add_phone_number()
+            elif i == 'l':
+                list_clients()
+            elif i == 'e':
+                edit_client()
+            elif i == 'd':
+                delete_client()
+            elif i == 'drop':
+                drop_data()
+            elif i == 'f':
+                find_clinet()
+            elif i == 'x':
+                run = False
