@@ -5,7 +5,7 @@
 # Сложность в том, что телефон у клиента может быть не один, а два, три и даже больше. А может и вообще не быть телефона (например, он не захотел его оставлять).
 # Вам необходимо разработать структуру БД для хранения информации и несколько функций на python для управления данными:
 # Функция, создающая структуру БД (таблицы) - done
-# Функция, позволяющая добавить нового клиента  +-
+# Функция, позволяющая добавить нового клиента  +
 # Функция, позволяющая добавить телефон для существующего клиента
 # Функция, позволяющая изменить данные о клиенте
 # Функция, позволяющая удалить телефон для существующего клиента
@@ -16,7 +16,7 @@
 # Результатом работы будет .py файл.
 
 import psycopg2
-# import pprint as pp
+from pprint import pprint as pp
 
 from unidecode import unidecode
 
@@ -30,7 +30,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
 
                 '''Check exist client in database'''
                 try:
-                    cur.execute('''SELECT count(*) FROM clients c
+                    cur.execute('''SELECT * FROM clients c
                     WHERE c.email= %s
                     ''', (email,))
                     try:
@@ -50,7 +50,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 '''Check exist phone in database'''
                 try:
                     cur.execute('''
-                    SELECT count(*) FROM phone_numbers pn
+                    SELECT * FROM phone_numbers pn
                     WHERE pn.number = %s;
                     ''', (number,))
                     try:
@@ -64,8 +64,6 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 except:
                     return True
 
-            def edit_client():
-                 pass
 
             def drop_data():
                 # удаление таблиц
@@ -74,6 +72,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 DROP TABLE clients;
                 """)
                 conn.commit()
+                return
 
             def show_help():
                 print('''
@@ -88,6 +87,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 f - find clients
                 x - exit
                 ''')
+                return
 
             def create_tables():
                 cur.execute("""
@@ -107,6 +107,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                      );
                      """)
                 conn.commit()  # фиксируем в БД
+                return
 
             def add_client():
                 name = input('Please, input clients Name: ')
@@ -137,10 +138,17 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                         print('Error! Some wrong with data')
                         return
 
-            def add_phone_number(phone, id_cl):
-                if phone != '':
-                    check_phone = check_exist_phonenum(phone)
-                    if check_phone == True:
+            def add_phone_number(phone=None, id_cl=None):
+                if phone == None:
+                    phone = input('input phone number:')
+
+                check_phone = check_exist_phonenum(phone)
+                if check_phone == True:
+                        if id_cl == None:
+                            mail = input('input clients email:')
+                            id_cl = find_clinet(mail)
+                            if id_cl == False:
+                                return
                         try:
                             cur.execute("""
                             INSERT INTO phone_numbers(number, id_cl) 
@@ -160,15 +168,50 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
 
             def list_clients():
                 cur.execute("""
-                         SELECT * FROM clients;
+                         SELECT c.name, c.surname, c.email, pn.number FROM clients c
+                         LEFT JOIN phone_numbers pn ON c.id_cl = pn.id_pn;
                          """)
+                conn.commit()
                 print('fetchall', cur.fetchall())  # извлечь все строки
 
             def delete_client():
-                pass
+                email = input('input clients email for delete:')
+                try:
+                    cur.execute('''
+                    DELETE FROM clients c
+                    WHERE c.email = %s 
+                    ''', (email,))
+                    conn.commit()
+                    print('done')
+                except:
+                    print('error')
+                return
 
-            def find_clinet():
-                pass
+            def find_clinet(value=None):
+                find = True
+                while find:
+                    params = ['name', 'surname', 'email', 'number']
+                    if value == None:
+                        value = input('input value:')
+                    queue = f'''
+                    SELECT c.cl_id, c.name, c.surname, c.email, pn.number FROM clients c
+                    JOIN phone_numbers pn ON pn.id_cl = c.id_cl
+                    WHERE c.{params[0]} = '{value}' OR c.{params[1]} = '{value}' OR c.{params[2]} = '{value}' OR pn.{params[3]} = '{value}'
+                    '''
+                    try:
+                        cur.execute(queue)
+                        print(cur.fetchall())
+                        id_cl = cur.fetchone()[0]
+                        conn.commit()
+                        find = False
+                        return id_cl
+                    except:
+                        print('no data')
+                        return False
+
+
+
+
 
             i = input('input command, h - help: ')
             if i == 'c':
