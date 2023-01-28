@@ -1,22 +1,16 @@
-# имя
-# фамилия
-# email
-# телефон
-# Сложность в том, что телефон у клиента может быть не один, а два, три и даже больше. А может и вообще не быть телефона (например, он не захотел его оставлять).
-# Вам необходимо разработать структуру БД для хранения информации и несколько функций на python для управления данными:
-# Функция, создающая структуру БД (таблицы) - done
+
+# Функция, создающая структуру БД (таблицы)  +
 # Функция, позволяющая добавить нового клиента  +
 # Функция, позволяющая добавить телефон для существующего клиента +
 # Функция, позволяющая изменить данные о клиенте
 # Функция, позволяющая удалить телефон для существующего клиента
 # Функция, позволяющая удалить существующего клиента
-# Функция, позволяющая найти клиента по его данным (имени, фамилии, email-у или телефону)
-# Функции выше являются обязательными, но это не значит что должны быть только они. При необходимости можете создавать дополнительные функции и классы.
-# Также предоставьте код, демонстрирующий работу всех написанных функций.
-# Результатом работы будет .py файл.
+# Функция, позволяющая найти клиента по его данным (имени, фамилии, email-у или телефону) +
+
 
 import psycopg2
 from pprint import pprint as pp
+
 
 from unidecode import unidecode
 
@@ -25,44 +19,39 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
     with conn.cursor() as cur:
         while run:
 
-
             def check_exist_client(name, surname, email):
 
                 '''Check exist client in database'''
+                cur.execute('''SELECT * FROM clients c
+                WHERE c.email= %s
+                ''', (email,))
                 try:
-                    cur.execute('''SELECT * FROM clients c
-                    WHERE c.email= %s
-                    ''', (email,))
-                    try:
-                        result = int(cur.fetchone()[0])
-                    except:
-                        result = None
-                    conn.commit()
-                    if int(result) :
-                        return False    # Check is NOT OK
-                    else:
-                        return True     # Check is OK
+                    result = int(cur.fetchone()[0])
                 except:
-                    return True
+                    result = None
+                conn.commit()
+                if int(result) :
+                    return False    # Check is NOT OK
+                else:
+                    return True     # Check is OK
+
 
 
             def check_exist_phonenum(number):
                 '''Check exist phone in database'''
+                cur.execute('''
+                SELECT * FROM phone_numbers pn
+                WHERE pn.number = %s;
+                ''', (number,))
                 try:
-                    cur.execute('''
-                    SELECT * FROM phone_numbers pn
-                    WHERE pn.number = %s;
-                    ''', (number,))
-                    try:
-                        result = int(cur.fetchone()[0])
-                    except:
-                        result = None
-                    if  int(result):
-                        return False  # Check is NOT OK
-                    else:
-                        return True  # Check is OK
+                    result = int(cur.fetchone())
                 except:
-                    return True
+                    result = None
+                if int(result):
+                    return False  # Check is NOT OK
+                else:
+                    return True  # Check is OK
+
 
 
             def drop_data():
@@ -145,10 +134,17 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 check_phone = check_exist_phonenum(phone)
                 if check_phone == True:
                         if id_cl == None:
-                            mail = input('input clients email:')
-                            id_cl = find_clinet(mail)
-                            if id_cl == False:
-                                return
+                            idcl = True
+                            while idcl:
+                                mail = input('input clients email(l-show clients):')
+                                if mail == 'l':
+                                    list_clients()
+                                else:
+                                    id_cl = find_clinet(mail)[0]
+                                    idcl = False
+                                    if id_cl == False:
+                                        return
+
                         try:
                             cur.execute("""
                             INSERT INTO phone_numbers(number, id_cl) 
@@ -172,7 +168,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                          LEFT JOIN phone_numbers pn ON c.id_cl = pn.id_pn;
                          """)
                 conn.commit()
-                print('fetchall', cur.fetchall())  # извлечь все строки
+                pp(cur.fetchall(),indent=1)  # извлечь все строки
 
             def delete_client():
                 email = input('input clients email for delete:')
@@ -194,20 +190,25 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                     if value == None:
                         value = input('input value:')
                     queue = f'''
-                    SELECT c.cl_id, c.name, c.surname, c.email, pn.number FROM clients c
-                    JOIN phone_numbers pn ON pn.id_cl = c.id_cl
+                    SELECT c.id_cl, c.name, c.surname, c.email, pn.number FROM clients c
+                    LEFT JOIN phone_numbers pn ON pn.id_cl = c.id_cl
                     WHERE c.{params[0]} = '{value}' OR c.{params[1]} = '{value}' OR c.{params[2]} = '{value}' OR pn.{params[3]} = '{value}'
                     '''
                     try:
                         cur.execute(queue)
-                        print(cur.fetchall())
-                        id_cl = cur.fetchone()[0]
-                        conn.commit()
-                        find = False
-                        return id_cl
+                        result = cur.fetchall()
+                        pp(result, indent=1)
                     except:
-                        print('no data')
-                        return False
+                        print('error or no data')
+                        return
+                    id_cl = []
+                    for i in result:
+                        id_cl.append(i[0])
+                    print(id_cl)
+                    find = False
+                    if len(id_cl) > 0:
+                        return id_cl
+
 
 
 
