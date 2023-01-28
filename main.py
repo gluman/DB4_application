@@ -3,8 +3,8 @@
 # Функция, позволяющая добавить нового клиента  +
 # Функция, позволяющая добавить телефон для существующего клиента +
 # Функция, позволяющая изменить данные о клиенте
-# Функция, позволяющая удалить телефон для существующего клиента
-# Функция, позволяющая удалить существующего клиента
+# Функция, позволяющая удалить телефон для существующего клиента +
+# Функция, позволяющая удалить существующего клиента +
 # Функция, позволяющая найти клиента по его данным (имени, фамилии, email-у или телефону) +
 
 
@@ -65,8 +65,10 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 a - add client
                 ap - add clients phone number 
                 l - list clients
+                lp - list phones
                 e - edit clients information
                 d - delete clients
+                dp - delete phone number
                 drop - drop tables
                 f - find clients
                 x - exit
@@ -128,14 +130,16 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                         if id_cl == None:
                             idcl = True
                             while idcl:
-                                mail = input('input clients email(l-show clients):')
-                                if mail == 'l':
+                                id = input('input clients id(l-show clients):')
+                                if id == 'l':
                                     list_clients()
                                 else:
-                                    id_cl = find_clinet(mail)[0]
+                                    id_cl = find_clinet(id)[0]
                                     idcl = False
                                     if id_cl == False:
-                                        return
+                                        quest = input('no clietn with your id, try again?(n-no)')
+                                        if quest == 'n':
+                                            return
 
                         try:
                             cur.execute("""
@@ -157,7 +161,16 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
             def list_clients():
                 cur.execute("""
                          SELECT c.id_cl, c.name, c.surname, c.email, pn.number FROM clients c
-                         LEFT JOIN phone_numbers pn ON c.id_cl = pn.id_pn;
+                         LEFT JOIN phone_numbers pn ON c.id_cl = pn.id_cl
+                         ORDER BY c.id_cl;
+                         """)
+                conn.commit()
+                pp(cur.fetchall(),indent=1)  # извлечь все строки
+            def list_phone():
+                cur.execute("""
+                         SELECT c.name, c.surname, c.email, pn.number, 'id phone:', pn.id_pn FROM phone_numbers pn
+                         LEFT JOIN clients c ON c.id_cl = pn.id_cl
+                         ORDER BY c.name, c.surname;
                          """)
                 conn.commit()
                 pp(cur.fetchall(),indent=1)  # извлечь все строки
@@ -165,23 +178,19 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
             def delete_client():
                 input_info =True
                 while input_info:
-                    email = input('input value of client for delete(or l - show all):')
-                    if email == 'l':
+                    info = input('input part of clients info for delete(or l - show all):')
+                    if info == 'l':
                         list_clients()
                     else:
                         input_info = False
                 print('finded next information:')
-                id_cl = find_clinet(email)
-                id_del = input('which id of client do you want ti delete?(b - break')
+                id_cl = find_clinet(info)
+                id_del = int(input('input id of client which do you want ti delete?(b - break'))
                 if id_del == 'b':
                     return
-                elif int(id_del) in id_cl:
+                elif id_del in id_cl:
                     try:
-                        cur.execute('''
-                        DELETE FROM phone_numbers pn
-                        WHERE pn.id_cl = %s 
-                        ''', (id_del,))
-                        conn.commit()
+                        delete_phone(None, id_del)
                         cur.execute('''
                         DELETE FROM clients c
                         WHERE c.id_cl = %s 
@@ -193,18 +202,80 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 else:
                     print('wrong id')
                     return
+            def delete_phone(number=None, id_cl=None):
+                if number==None and id_cl == None:
+                        input_info = True
+                        while input_info:
+                            number = input('input number of phone for delete(or l - show all):')
+                            if number == 'l':
+                                list_phone()
+                            else:
+                                input_info = False
+                if number!= None:
+                    try:
+                        cur.execute('''
+                            DELETE FROM phone_numbers pn
+                            WHERE pn.number = %s 
+                            ''', (number,))
+                        conn.commit()
+                    except:
+                        return
+                if id_cl != None:
+                    try:
+                        cur.execute('''
+                            DELETE FROM phone_numbers pn
+                            WHERE pn.id_cl = %s 
+                            ''', (id_cl,))
+                        conn.commit()
+                    except:
+                        return
+
+            def update_client_info():
+                input_info =True
+                while input_info:
+                    info = input('input part of clients info for update(or l - show all):')
+                    if info == 'l':
+                        list_clients()
+                    else:
+                        input_info = False
+                print('finded next information:')
+                id_cl = find_clinet(info)
+                id_upd = int(input('input id of client which do you want to update?(b - break'))
+                if id_del == 'b':
+                    return
+                elif id_upd in id_cl:
+                    try:
+                        update_phone_number(None, id_del)
+                        cur.execute('''
+                        DELETE FROM clients c
+                        WHERE c.id_cl = %s 
+                        ''', (id_del,))
+                        conn.commit()
+                        print('done')
+                    except:
+                        print('error')
+                else:
+                    print('wrong id')
+                    return
+            def update_phone_number():
+                pass
+
 
             def find_clinet(value=None):
                 find = True
                 while find:
-                    params = ['name', 'surname', 'email', 'number']
+                    params = ['id_cl', 'name', 'surname', 'email', 'number']
                     if value == None:
                         value = input('input value:')
+                    try:
+                        value_id = int(value)
+                    except:
+                        value_id = 0
                     queue = f'''
                     SELECT c.id_cl, c.name, c.surname, c.email, pn.number FROM clients c
                     LEFT JOIN phone_numbers pn ON pn.id_cl = c.id_cl
-                    WHERE c.{params[0]} = '{value}' OR c.{params[1]} = '{value}' OR c.{params[2]} = '{value}' OR pn.{params[3]} = '{value}'
-                    '''
+                    WHERE c.{params[0]} = '{value_id}' OR c.{params[1]} = '{value}' OR c.{params[2]} = '{value}' OR c.{params[3]} = '{value}' OR pn.{params[4]} = '{value}'
+                    ORDER BY c.id_cl'''
                     try:
                         cur.execute(queue)
                         result = cur.fetchall()
@@ -236,10 +307,14 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 add_phone_number()
             elif i == 'l':
                 list_clients()
+            elif i == 'lp':
+                list_phone()
             elif i == 'e':
                 edit_client()
             elif i == 'd':
                 delete_client()
+            elif i == 'dp':
+                delete_phone()
             elif i == 'drop':
                 drop_data()
             elif i == 'f':
