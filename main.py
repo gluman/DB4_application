@@ -20,22 +20,18 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
         while run:
 
             def check_exist_client(name, surname, email):
-
                 '''Check exist client in database'''
                 cur.execute('''SELECT * FROM clients c
                 WHERE c.email= %s
                 ''', (email,))
                 try:
-                    result = int(cur.fetchone()[0])
+                    result = cur.fetchone()
                 except:
                     result = None
-                conn.commit()
-                if int(result) :
-                    return False    # Check is NOT OK
+                if result == None:
+                    return True    # Check found exist client
                 else:
-                    return True     # Check is OK
-
-
+                    return False     # Check is OK
 
             def check_exist_phonenum(number):
                 '''Check exist phone in database'''
@@ -47,12 +43,11 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                     result = int(cur.fetchone())
                 except:
                     result = None
-                if int(result):
+                if type(result) == int:
+                    print('phone number alredy exist')
                     return False  # Check is NOT OK
                 else:
                     return True  # Check is OK
-
-
 
             def drop_data():
                 # удаление таблиц
@@ -106,31 +101,28 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
 
                 check = check_exist_client(name, surname, email)
                 if check:
+                    cur.execute("""
+                    INSERT INTO clients(name, surname, email) 
+                    VALUES(%s, %s, %s) 
+                    ON CONFLICT
+                    DO NOTHING
+                    RETURNING id_cl;
+                    """, (name, surname, email))
                     try:
-                        cur.execute("""
-                        INSERT INTO clients(name, surname, email) 
-                        VALUES(%s, %s, %s) 
-                        ON CONFLICT
-                        DO NOTHING
-                        RETURNING id_cl;
-                        """, (name, surname, email))
-
                         conn.commit()
                         result = cur.fetchone()[0]
-                        if int(result):
-                            print(f'Client {name}, {surname}, {email} added id: {result}')
-                            add_phone_number(phone, result)
-                            return
-                        else:
-                            return
                     except:
                         print('Error! Some wrong with data')
+                    if int(result):
+                        print(f'Client {name}, {surname}, {email} added id: {result}')
+                        add_phone_number(phone, result)
+                        return
+                    else:
                         return
 
             def add_phone_number(phone=None, id_cl=None):
                 if phone == None:
                     phone = input('input phone number:')
-
                 check_phone = check_exist_phonenum(phone)
                 if check_phone == True:
                         if id_cl == None:
@@ -164,24 +156,43 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
 
             def list_clients():
                 cur.execute("""
-                         SELECT c.name, c.surname, c.email, pn.number FROM clients c
+                         SELECT c.id_cl, c.name, c.surname, c.email, pn.number FROM clients c
                          LEFT JOIN phone_numbers pn ON c.id_cl = pn.id_pn;
                          """)
                 conn.commit()
                 pp(cur.fetchall(),indent=1)  # извлечь все строки
 
             def delete_client():
-                email = input('input clients email for delete:')
-                try:
-                    cur.execute('''
-                    DELETE FROM clients c
-                    WHERE c.email = %s 
-                    ''', (email,))
-                    conn.commit()
-                    print('done')
-                except:
-                    print('error')
-                return
+                input_info =True
+                while input_info:
+                    email = input('input value of client for delete(or l - show all):')
+                    if email == 'l':
+                        list_clients()
+                    else:
+                        input_info = False
+                print('finded next information:')
+                id_cl = find_clinet(email)
+                id_del = input('which id of client do you want ti delete?(b - break')
+                if id_del == 'b':
+                    return
+                elif int(id_del) in id_cl:
+                    try:
+                        cur.execute('''
+                        DELETE FROM phone_numbers pn
+                        WHERE pn.id_cl = %s 
+                        ''', (id_del,))
+                        conn.commit()
+                        cur.execute('''
+                        DELETE FROM clients c
+                        WHERE c.id_cl = %s 
+                        ''', (id_del,))
+                        conn.commit()
+                        print('done')
+                    except:
+                        print('error')
+                else:
+                    print('wrong id')
+                    return
 
             def find_clinet(value=None):
                 find = True
