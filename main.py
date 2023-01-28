@@ -2,7 +2,7 @@
 # Функция, создающая структуру БД (таблицы)  +
 # Функция, позволяющая добавить нового клиента  +
 # Функция, позволяющая добавить телефон для существующего клиента +
-# Функция, позволяющая изменить данные о клиенте
+# Функция, позволяющая изменить данные о клиенте +
 # Функция, позволяющая удалить телефон для существующего клиента +
 # Функция, позволяющая удалить существующего клиента +
 # Функция, позволяющая найти клиента по его данным (имени, фамилии, email-у или телефону) +
@@ -130,9 +130,11 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                         if id_cl == None:
                             idcl = True
                             while idcl:
-                                id = input('input clients id(l-show clients):')
+                                id = input('input clients id (l-show clients, b-break):')
                                 if id == 'l':
                                     list_clients()
+                                elif id == 'b':
+                                    break
                                 else:
                                     id_cl = find_clinet(id)[0]
                                     idcl = False
@@ -181,6 +183,8 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                     info = input('input part of clients info for delete(or l - show all):')
                     if info == 'l':
                         list_clients()
+                    elif info == 'b':
+                        break
                     else:
                         input_info = False
                 print('finded next information:')
@@ -210,6 +214,8 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                             if id_pn == 'l':
                                 list_phone()
                                 continue
+                            elif id_pn == 'b':
+                                break
                             else:
                                 input_info = False
                 if id_pn != None:
@@ -235,10 +241,12 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 input_info = True
                 while input_info:
                     params = ['id_cl', 'name', 'surname', 'email', 'number']
-                    infoclient = input('input info of client to find him (exist id, name, surname, email, number) or l - show all clients')
+                    infoclient = input('input info of client to find him (exist id, name, surname, email, number) or l - show all clients, b - break')
                     if infoclient  == 'l':
                         list_clients()
                         continue
+                    elif infoclient  == 'b':
+                        break
                     else:
                         id_cl = find_clinet(infoclient)
                         if id_cl == None:
@@ -248,6 +256,8 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                             param = input('input one parameter(name, surname, email, number) for update or l -for show all clients):')
                             if param == 'l':
                                 list_clients()
+                            elif param == 'b':
+                                break
                             elif param in params:
                                 try:
                                     id_upd = int(
@@ -255,7 +265,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                                 except:
                                     continue
                                 if id_upd in id_cl:
-                                    if param != 'phone':
+                                    if param != 'number':
                                         new_value = input('input new value for update')
 
                                         try:
@@ -323,10 +333,6 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                     find = False
                     if len(id_cl) > 0:
                         return id_cl
-
-
-
-
 
 
             i = input('input command, h - help: ')
