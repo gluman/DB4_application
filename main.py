@@ -202,21 +202,22 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                 else:
                     print('wrong id')
                     return
-            def delete_phone(number=None, id_cl=None):
+            def delete_phone(id_pn=None, id_cl=None):
                 if number==None and id_cl == None:
                         input_info = True
                         while input_info:
-                            number = input('input number of phone for delete(or l - show all):')
-                            if number == 'l':
+                            id_pn= input('input id number of phone for delete(or l - show all):')
+                            if id_pn == 'l':
                                 list_phone()
+                                continue
                             else:
                                 input_info = False
-                if number!= None:
+                if id_pn != None:
                     try:
                         cur.execute('''
                             DELETE FROM phone_numbers pn
-                            WHERE pn.number = %s 
-                            ''', (number,))
+                            WHERE pn.id_pn = %s 
+                            ''', (id_pn,))
                         conn.commit()
                     except:
                         return
@@ -231,35 +232,67 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
                         return
 
             def update_client_info():
-                input_info =True
+                input_info = True
                 while input_info:
-                    info = input('input part of clients info for update(or l - show all):')
-                    if info == 'l':
+                    params = ['id_cl', 'name', 'surname', 'email', 'number']
+                    infoclient = input('input info of client to find him (exist id, name, surname, email, number) or l - show all clients')
+                    if infoclient  == 'l':
                         list_clients()
+                        continue
                     else:
-                        input_info = False
-                print('finded next information:')
-                id_cl = find_clinet(info)
-                id_upd = int(input('input id of client which do you want to update?(b - break'))
-                if id_del == 'b':
-                    return
-                elif id_upd in id_cl:
-                    try:
-                        update_phone_number(None, id_del)
-                        cur.execute('''
-                        DELETE FROM clients c
-                        WHERE c.id_cl = %s 
-                        ''', (id_del,))
-                        conn.commit()
-                        print('done')
-                    except:
-                        print('error')
-                else:
-                    print('wrong id')
-                    return
-            def update_phone_number():
-                pass
+                        id_cl = find_clinet(infoclient)
+                        if id_cl == None:
+                            print('no data find')
+                            continue
+                        else:
+                            param = input('input one parameter(name, surname, email, number) for update or l -for show all clients):')
+                            if param == 'l':
+                                list_clients()
+                            elif param in params:
+                                try:
+                                    id_upd = int(
+                                        input('input id of client which do you want to update?(b - break'))
+                                except:
+                                    continue
+                                if id_upd in id_cl:
+                                    if param != 'phone':
+                                        new_value = input('input new value for update')
 
+                                        try:
+                                            cur.execute(f'''
+                                            UPDATE clients SET {param}= %s WHERE id_cl=%s;
+                                            ''',
+                                            (new_value, id_upd))
+                                            conn.commit()
+                                            print('done')
+                                            input_info = False
+                                            return
+                                        except:
+                                            print('error')
+                                    else:
+                                        list_phone()
+                                        new_value = input('input new value for update')
+                                        try:
+                                            id_pn= int(input('input id of phone which do you want to update?'))
+                                        except:
+                                            continue
+                                        try:
+                                            cur.execute('''
+                                            UPDATE phone_numbers SET number = %s WHERE id_pn=%s;
+                                            ''',
+                                            (new_value, id_pn))
+                                            conn.commit()
+                                            print('done')
+                                            input_info = False
+                                            return
+                                        except:
+                                            try:
+                                                delete_phone(id_pn,None)
+                                                add_phone_number(new_value,id_upd)
+                                            except:
+                                                print('error')
+                                else:
+                                    print('wrong id')
 
             def find_clinet(value=None):
                 find = True
@@ -310,7 +343,7 @@ with psycopg2.connect(database="clientdatabase", user="postgres", password="post
             elif i == 'lp':
                 list_phone()
             elif i == 'e':
-                edit_client()
+                update_client_info()
             elif i == 'd':
                 delete_client()
             elif i == 'dp':
